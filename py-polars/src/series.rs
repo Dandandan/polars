@@ -544,6 +544,42 @@ impl PySeries {
         Ok(PySeries::new(s))
     }
 
+    pub fn str_contains(&self, pat: &str) -> PyResult<Self> {
+        let ca = self.series.utf8().map_err(PyPolarsEr::from)?;
+        let s = ca.contains(pat).map_err(PyPolarsEr::from)?.into_series();
+        Ok(s.into())
+    }
+
+    pub fn str_replace(&self, pat: &str, val: &str) -> PyResult<Self> {
+        let ca = self.series.utf8().map_err(PyPolarsEr::from)?;
+        let s = ca
+            .replace(pat, val)
+            .map_err(PyPolarsEr::from)?
+            .into_series();
+        Ok(s.into())
+    }
+
+    pub fn str_replace_all(&self, pat: &str, val: &str) -> PyResult<Self> {
+        let ca = self.series.utf8().map_err(PyPolarsEr::from)?;
+        let s = ca
+            .replace_all(pat, val)
+            .map_err(PyPolarsEr::from)?
+            .into_series();
+        Ok(s.into())
+    }
+
+    pub fn str_to_uppercase(&self) -> PyResult<Self> {
+        let ca = self.series.utf8().map_err(PyPolarsEr::from)?;
+        let s = ca.to_uppercase().into_series();
+        Ok(s.into())
+    }
+
+    pub fn str_to_lowercase(&self) -> PyResult<Self> {
+        let ca = self.series.utf8().map_err(PyPolarsEr::from)?;
+        let s = ca.to_lowercase().into_series();
+        Ok(s.into())
+    }
+
     pub fn str_parse_date32(&self, fmt: Option<&str>) -> PyResult<Self> {
         if let Series::Utf8(ca) = &self.series {
             let ca = ca.as_date32(fmt).map_err(PyPolarsEr::from)?;
@@ -559,6 +595,23 @@ impl PySeries {
             Ok(ca.into_series().into())
         } else {
             Err(PyPolarsEr::Other("cannot parse date64 expected utf8 type".into()).into())
+        }
+    }
+
+    pub fn as_duration(&self) -> PyResult<Self> {
+        match self.series.dtype() {
+            ArrowDataType::Date64(_) => {
+                let ca = self.series.date64().unwrap().as_duration();
+                Ok(ca.into_series().into())
+            }
+            ArrowDataType::Date32(_) => {
+                let ca = self.series.date32().unwrap().as_duration();
+                Ok(ca.into_series().into())
+            }
+            _ => Err(PyPolarsEr::Other(
+                "Only date32 and date64 can be transformed as duration".into(),
+            )
+            .into()),
         }
     }
 
